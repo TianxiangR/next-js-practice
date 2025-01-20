@@ -212,12 +212,33 @@ FormForwardRef.displayName = 'Form';
 const Form = FormForwardRef as <T extends TFieldValues>(props: React.PropsWithRef<FormProps<T> & {ref?: React.Ref<HTMLFormElement>}>) => JSX.Element;
 
 export type ValidateTime = 'change' | 'blur' | 'submit';
-export interface FormFieldProps<T extends TFieldValues, TKey extends StringKeyOf<T>> {
+// export interface FormFieldProps<T extends TFieldValues, TKey extends StringKeyOf<T>> {
+//   name: TKey;
+//   children: (args: {
+//     field: FieldState<T[TKey]>;
+//     props: {
+//       onValueChange: (value: T[TKey]) => void;
+//       onBlur: () => void;
+//       name: TKey;
+//     };
+//   }) => React.ReactNode;
+//   formApi: FormApi<T>;
+//   /**
+//    * @default 'submit'
+//    */
+//   validateOn?: ValidateTime;
+//   /**
+//    * @default 'change'
+//    */
+//   revalidateOn?: ValidateTime;
+// }
+
+export interface FormFieldPropsWithTransform<T extends TFieldValues, TKey extends StringKeyOf<T>, TOriginal = T[TKey]> {
   name: TKey;
   children: (args: {
     field: FieldState<T[TKey]>;
     props: {
-      onValueChange: (value: T[TKey]) => void;
+      onValueChange: (value: TOriginal) => void;
       onBlur: () => void;
       name: TKey;
     };
@@ -231,10 +252,12 @@ export interface FormFieldProps<T extends TFieldValues, TKey extends StringKeyOf
    * @default 'change'
    */
   revalidateOn?: ValidateTime;
+  transform?: (value: TOriginal) => T[TKey];
 }
 
-export function FormField<T extends TFieldValues, TKey extends StringKeyOf<T>>(props: FormFieldProps<T, TKey>) {
-  const { name, children, formApi, validateOn = 'submit', revalidateOn = 'change' } = props;
+export function FormField<T extends TFieldValues, TKey extends StringKeyOf<T>, TOriginal>(props: FormFieldPropsWithTransform<T, TKey, TOriginal>): JSX.Element;
+export function FormField<T extends TFieldValues, TKey extends StringKeyOf<T>>(props: FormFieldPropsWithTransform<T, TKey>): JSX.Element {
+  const { name, children, formApi, validateOn = 'submit', revalidateOn = 'change', transform } = props;
   const {formState, dispatch, validate} = formApi;
   const field: FieldState<T[TKey]> = formState.fields[name]! || { ...defaultFieldState };
   const formValues = useMemo(() => {
@@ -243,7 +266,6 @@ export function FormField<T extends TFieldValues, TKey extends StringKeyOf<T>>(p
       return acc;
     }, {} as T);
   }, [formState.fields]);
-
   const validateField = useCallback((name: TKey, values: T) => {
     const result = validate?.(values) ?? {} as Record<TKey, string | undefined>;
     console.log(result);
